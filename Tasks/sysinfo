@@ -6,8 +6,8 @@ run(){
         UPDATED="$(date)"
         HOST="$HOSTNAME"
         CPU="$(uptime | cut -d: -f5)"
-        RAM="700m/2910mb"
-        STORAGE="2.5G/19G"
+	RAM="$(free -m | awk 'NR==2{printf "%s/%sMB", $3,$2}')"
+	STORAGE="$(df / -h | awk '$NF=="/"{printf "%s/%s", $3,$2}')"
         UPTIME="$(uptime -p)"
         tjson="$(jq --null-input \
                    --arg updated "$UPDATED" \
