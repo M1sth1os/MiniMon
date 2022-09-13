@@ -20,6 +20,11 @@ clean(){
 	fi
 }
 
+#Log functions
+log(){ printf '\e[0;%sm[\e[0m%s\e[0;%sm]\e[0m %s\n' "${3:-35}" "$(date)" "${3:-35}" "$1"; }
+warn(){ log "$1" "${2:-warning}" 33; }
+err(){ log "$1" "${2:-error}" 31; exit 1; }
+
 usage(){
 	echo "MiniMon; made by Misthios
 -p : port for the server (defaults to 12345)
@@ -39,29 +44,27 @@ setup(){
 }
 
 
+	 #socat -u openssl-listen:"$PORT",fork,reuseaddr,cert="$CERT",verify="$VERIFY" PIPE:/tmp/minimon/minimon-in
 run_server(){
-	 socat -u openssl-listen:"$PORT",fork,reuseaddr,cert="$CERT",verify="$VERIFY" PIPE:/tmp/minimon/minimon-in
-}
-sort(){
-	while :
-	 do
-		 read msg < /tmp/minimon/minimon-in
-		 name="$(echo "$msg" | jq -r '.host')"
-		 pipe="/tmp/minimon/hosts/$name"
-		 if ! [ -e "$pipe" ]; then
-			 mkfifo $pipe
-			 echo "$name" >> /tmp/minimon/control #Notify control about the new host
-			 
-		 fi
-		 echo "$msg" >> $pipe
+	 socat -u openssl-listen:"$PORT",fork,reuseaddr,cert="$CERT",verify="$VERIFY" \
+	 'system:
+			read MESSAGE
+			name=$(echo $MESSAGE | jq -r ".host")
+			echo connect $name >> /tmp/minimon/control
+
+	 	while read MESSAGE
+		do
+			echo $MESSAGE >> /tmp/minimon/hosts/$name
 		done
+		echo disconnect $name >> /tmp/minimon/control
+		'
+	
 }
 
 #Read the hosts metrics
 listen(){
-	while :
+	while read msg < /tmp/minimon/hosts/$1
 	do
-		read msg < /tmp/minimon/hosts/$1
 		echo $msg
 	done
 }
@@ -70,8 +73,24 @@ listen(){
 listen_control(){
 	while :
 	do
-		read name < /tmp/minimon/control
-		listen $name&
+		read msg < /tmp/minimon/control
+		echo $msg
+		name="$(echo $msg | cut -d' ' -f2)"
+		case "$msg" in
+			connect*) 
+				  pipe="/tmp/minimon/hosts/$name"
+				  if ! [ -e "$pipe" ]; then 
+					  log "New host: $name"
+					  mkfifo /tmp/minimon/hosts/"$name"
+					  listen $name&
+				  else 
+					  log "$name reconnected"
+				  fi
+				  ;;
+			disconnect*) 
+				  log "$name disconnected"
+			        ;;
+		 esac
 	done
 }
 
@@ -89,7 +108,7 @@ done
 #default values
 : ${PORT:="12345"}
 : ${TASKDIR:="./Tasks/"}
-: ${VERIFY:=0} #off by default for now
+: ${VERIFY:=0} #off by gefault for now
 STARTED=false
 
 
@@ -105,7 +124,6 @@ if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then echo "verify must either be
 
 setup
 run_server&
-sort&
 listen_control&
 STARTED=true #for the cleanup trap
 
