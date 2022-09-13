@@ -1,0 +1,89 @@
+#!/bin/sh
+set -m
+
+#==================================================================================================
+#title           :minimon-server
+#description     :Server for minimon
+#author          :Wesley van Tilburg
+#date            :13/09/2022
+#version         :0.05
+#==================================================================================================
+
+trap 'clean' EXIT SIGINT SIGTERM
+
+clean(){
+	echo "cleaning"
+	kill -- -$(jobs -p)
+	rm -rf /tmp/mini*
+	exit 0
+}
+
+usage(){
+	echo "MiniMon; made by Misthios
+-p : port off the server (defaults to 12345)
+-c : path for the certificate
+-v : verify the certificate (defaults to 0 = false
+-t : folder which contains the tasks shell scripts (defaults to ./Tasks)
+";}
+
+setup(){
+	mkdir -p /tmp/minimon/hosts/
+	if ! [ -e /tmp/minimon/control ]; then
+		mkfifo /tmp/minimon/control
+	fi
+	if ! [ -e /tmp/minimon/minimon-in ]; then
+		mkfifo /tmp/minimon/minimon-in
+	fi
+}
+
+
+run_server(){
+	 socat -u openssl-listen:12345,fork,reuseaddr,cert=../test.pem,verify=0 PIPE:/tmp/minimon/minimon-in
+}
+sort(){
+	while :
+	 do
+		 read msg < /tmp/minimon/minimon-in
+		 name="$(echo "$msg" | jq -r '.host')"
+		 pipe="/tmp/minimon/hosts/$name"
+		 if ! [ -e "$pipe" ]; then
+			 mkfifo $pipe
+			 echo "$name" >> /tmp/minimon/control #Notify control about the new host
+			 
+		 fi
+		 echo "$msg" >> $pipe
+		done
+}
+
+#Read the hosts metrics
+listen(){
+	while :
+	do
+		read msg < /tmp/minimon/hosts/$1
+	done
+}
+
+#start a background job to read the hosts metrics
+listen_control(){
+	while :
+	do
+		read name < /tmp/minimon/control
+		listen $name&
+	done
+}
+
+#todo: argument handling
+
+
+setup
+run_server&
+sort&
+listen_control&
+
+#todo: replace with shell
+while :
+do
+	sleep 1
+done
+
+
