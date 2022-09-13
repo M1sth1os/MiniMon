@@ -80,7 +80,11 @@ done
 
 #Make sure we have the required params
 if [ -z "$IP" ]; then echo "A ip must be given"; exit 1; fi;
+
+#Make sure that cert is a valid pem file
 if [ -z "$CERT" ]; then echo "A cert path must be given"; exit 1; fi;
+if ! [ -f "$CERT" ]; then echo "cert not found"; exit 1; fi;
+if ! openssl x509 --noout -in "$CERT"; then echo "cert is not a valid pem"; exit 1; fi;
 
 #Make sure that verify is a number
 re='^[0-9]+$'
