@@ -1,0 +1,90 @@
+#!/bin/sh
+set -e
+
+#==================================================================================================
+#title           :minimon-client
+#description     :Client for minimon
+#author          :Wesley van Tilburg
+#date            :13/09/2022
+#version         :0.1    
+#==================================================================================================
+
+usage(){
+	echo "MiniMon; made by Misthios
+-i : ip off the server
+-p : port off the server (defaults to 12345)
+-c : path for the certificate
+-v : verify the certificate (defaults to 0 = false
+-d : delay for the metrics in seconds (defaults to 15)
+-t : folder which contains the tasks shell scripts (defaults to ./Tasks)
+";}
+
+
+#run all the tasks and concat the json output to form the end data
+gen_json(){
+	for task in $TASKS 
+	do
+		. $task
+		run #sourced_function
+       		JSON="$(echo "$JSON $tjson" | jq -s add )"
+	done
+	
+}
+
+#write the json to the tmp file which socat tails for new data
+post_json(){
+	echo $JSON >> /tmp/minimon-in
+
+}
+
+setup(){
+	if ! [ -d "$TASKDIR" ]; then echo "taskdir does not exist"; exit 1; fi
+	TASKS="$(find "$TASKDIR" -type f -maxdepth 1)"
+	touch /tmp/minimon-in
+	tail -f /tmp/minimon-in | socat stdio openssl-connect:"$IP":"$PORT",cert="$CERT",verify="$VERIFY" &
+
+}
+
+main(){
+setup
+
+#main loop
+while true
+do
+	gen_json
+	post_json
+	sleep $DELAY
+done
+
+}
+
+#--------- ARGUMENTS ----------#
+while getopts ':i:t:p:d:c:v:h' OPTION; do
+	case "$OPTION" in
+		i) IP="$OPTARG";;
+		p) PORT="$OPTARG";;
+		d) DELAY="$OPTARG";;
+		c) CERT="$OPTARG";;
+		t) TASKDIR="$OPTARG";;
+		v) VERIFY="$OPTARG";;
+		h) usage; exit 0;;
+	esac
+done
+
+#default values
+: ${PORT:="12345"}
+: ${DELAY:=15}
+: ${TASKDIR:="./Tasks/"}
+: ${VERIFY:=0} #off by default for now
+
+
+#Make sure we have the required params
+if [ -z "$IP" ]; then echo "A ip must be given"; exit 1; fi;
+if [ -z "$CERT" ]; then echo "A cert path must be given"; exit 1; fi;
+
+#Make sure that verify is a number
+re='^[0-9]+$'
+if ! [[ $VERIFY =~ $re ]] ; then echo "Verify must be a number" ; exit 1; fi
+if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then echo "verify must either be 0 or 1"; exit 1; fi;
+
+main

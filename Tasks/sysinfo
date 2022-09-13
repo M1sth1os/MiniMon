@@ -1,0 +1,27 @@
+#!/bin/sh
+
+
+#Get basic system information
+run(){
+        UPDATED="$(date)"
+        HOST="$HOSTNAME"
+        CPU="$(uptime | cut -d: -f5)"
+        RAM="700m/2910mb"
+        STORAGE="2.5G/19G"
+        UPTIME="$(uptime -p)"
+        tjson="$(jq --null-input \
+                   --arg updated "$UPDATED" \
+                   --arg host "$HOST" \
+                   --arg cpu "$CPU" \
+                   --arg ram "$RAM" \
+                   --arg storage "$STORAGE" \
+                   --arg uptime "$UPTIME" \
+                  '{"updated" : $updated,
+                    "host": $host,
+                    "system": {
+                        "cpu": $cpu,
+                        "ram": $ram,
+                        "storage": $storage,
+                        "uptime": $uptime
+            }}')"
+}
