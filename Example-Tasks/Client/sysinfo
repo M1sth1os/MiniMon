@@ -8,7 +8,8 @@ run(){
         CPU="$(uptime | cut -d: -f5)"
 	RAM="$(free -m | awk 'NR==2{printf "%s/%sMB", $3,$2}')"
 	STORAGE="$(df / -h | awk '$NF=="/"{printf "%s/%s", $3,$2}')"
-        UPTIME="$(uptime -p)"
+        UPTIME="$(uptime )"
+	OS="$(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '"')"
         tjson="$(jq --null-input \
                    --arg updated "$UPDATED" \
                    --arg host "$HOST" \
@@ -16,8 +17,10 @@ run(){
                    --arg ram "$RAM" \
                    --arg storage "$STORAGE" \
                    --arg uptime "$UPTIME" \
+                   --arg os "$OS" \
                   '{"updated" : $updated,
                     "host": $host,
+		    "os": $os,
                     "system": {
                         "cpu": $cpu,
                         "ram": $ram,
