@@ -9,6 +9,12 @@ set -e
 #version         :0.1    
 #==================================================================================================
 
+trap 'clean' EXIT SIGINT SIGTERM
+
+clean(){
+		echo "cleaning"
+		rm -rf /tmp/minimon-in
+}
 usage(){
 	echo "MiniMon; made by Misthios
 -i : ip off the server
