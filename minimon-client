@@ -1,20 +1,30 @@
 #!/bin/sh
-set -e
+set  -m -o pipefail
 
 #==================================================================================================
 #title           :minimon-client
 #description     :Client for minimon
 #author          :Wesley van Tilburg
 #date            :13/09/2022
-#version         :0.1    
+#version         :0.1
 #==================================================================================================
 
 trap 'clean' EXIT SIGINT SIGTERM
 
 clean(){
-		echo "cleaning"
+		if $STARTED; then
+			kill -- -$(jobs -p)
+		fi
 		rm -rf /tmp/minimon-in
+		rm -rf /tmp/minimon-jobs
+		exit 0
 }
+
+#Log functions
+log(){ printf '\e[0;%sm[\e[0m%s\e[0;%sm]\e[0m %s\n' "${3:-35}" "$(date)" "${3:-35}" "$1"; }
+warn(){ log "$1" "${2:-warning}" 33; }
+err(){ log "$1" "${2:-error}" 31; exit 1; }
+
 usage(){
 	echo "MiniMon; made by Misthios
 -i : ip off the server
@@ -44,15 +54,30 @@ post_json(){
 }
 
 setup(){
-	if ! [ -d "$TASKDIR" ]; then echo "taskdir does not exist"; exit 1; fi
+	if ! [ -d "$TASKDIR" ]; then err "taskdir does not exist";  fi
 	TASKS="$(find "$TASKDIR" -type f -maxdepth 1)"
 	touch /tmp/minimon-in
-	tail -f /tmp/minimon-in | socat stdio openssl-connect:"$IP":"$PORT",cert="$CERT",verify="$VERIFY" &
 
 }
 
+run_server(){
+	tail -f /tmp/minimon-in | socat stdio openssl-connect:"$IP":"$PORT",cert="$CERT",verify="$VERIFY" 2>/dev/null
+}
+ 
+
 main(){
 setup
+log "starting minimon..."
+run_server&
+#---------- Ugly way to detect connection failure by checking bg job status-----------#
+sleep 5 #give socat time to connect
+echo $(jobs) >> /tmp/minimon-jobs
+cat /tmp/minimon-jobs | grep -qi "Running"
+if ! [ "$?" -eq 0 ]; then err failed to connect...; fi
+#-------------------------------------------------------------------------------------#
+STARTED=true
+
+
 
 #main loop
 while true
@@ -82,19 +107,20 @@ done
 : ${DELAY:=15}
 : ${TASKDIR:="./Tasks/"}
 : ${VERIFY:=0} #off by default for now
+STARTED=false
 
 
 #Make sure we have the required params
-if [ -z "$IP" ]; then echo "A ip must be given"; exit 1; fi;
+if [ -z "$IP" ]; then err "A ip must be given";  fi;
 
 #Make sure that cert is a valid pem file
-if [ -z "$CERT" ]; then echo "A cert path must be given"; exit 1; fi;
-if ! [ -f "$CERT" ]; then echo "cert not found"; exit 1; fi;
-if ! openssl x509 --noout -in "$CERT"; then echo "cert is not a valid pem"; exit 1; fi;
+if [ -z "$CERT" ]; then err "A cert path must be given"; fi;
+if ! [ -f "$CERT" ]; then err "cert not found"; fi;
+if ! openssl x509 --noout -in "$CERT"; then err "cert is not a valid pem"; fi;
 
 #Make sure that verify is a number
 re='^[0-9]+$'
-if ! [[ $VERIFY =~ $re ]] ; then echo "Verify must be a number" ; exit 1; fi
-if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then echo "verify must either be 0 or 1"; exit 1; fi;
+if ! [[ $VERIFY =~ $re ]] ; then err "Verify must be a number" ; fi
+if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then err "verify must either be 0 or 1"; fi;
 
 main
