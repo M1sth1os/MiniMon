@@ -50,7 +50,7 @@ run_server(){
 	 'system:
 			read MESSAGE
 			name=$(echo $MESSAGE | jq -r ".host")
-			echo connect $name >> /tmp/minimon/control
+			echo connect $name $SOCAT_PEERADDR >> /tmp/minimon/control
 
 	 	while read MESSAGE
 		do
@@ -74,11 +74,11 @@ listen_control(){
 	while :
 	do
 		read msg < /tmp/minimon/control
-		echo $msg
 		name="$(echo $msg | cut -d' ' -f2)"
 		case "$msg" in
 			connect*) 
 				  pipe="/tmp/minimon/hosts/$name"
+				  ip="$(echo $msg | cut -d' ' -f3)"
 				  if ! [ -e "$pipe" ]; then 
 					  log "New host: $name"
 					  mkfifo /tmp/minimon/hosts/"$name"
@@ -86,9 +86,12 @@ listen_control(){
 				  else 
 					  log "$name reconnected"
 				  fi
+				  CURR_HOSTS="$CURR_HOSTS $name:$ip"
 				  ;;
 			disconnect*) 
 				  log "$name disconnected"
+				  old="$(echo $CURR_HOSTS | grep -o "$name.[0-9].*")"
+				  CURR_HOSTS="$(echo $CURR_HOSTS | sed "s/$old//g")"
 			        ;;
 		 esac
 	done
@@ -110,6 +113,7 @@ done
 : ${TASKDIR:="./Tasks/"}
 : ${VERIFY:=0} #off by gefault for now
 STARTED=false
+CURR_HOSTS=""
 
 
 #Make sure that cert is a valid pem file
