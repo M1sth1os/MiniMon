@@ -13,7 +13,6 @@ trap 'clean' EXIT SIGINT SIGTERM
 
 clean(){
 	if $STARTED; then
-		echo "cleaning"
 		kill -- -$(jobs -p)
 		rm -rf /tmp/mini*
 		exit 0
@@ -38,13 +37,9 @@ setup(){
 	if ! [ -e /tmp/minimon/control ]; then
 		mkfifo /tmp/minimon/control
 	fi
-	if ! [ -e /tmp/minimon/minimon-in ]; then
-		mkfifo /tmp/minimon/minimon-in
-	fi
 }
 
 
-	 #socat -u openssl-listen:"$PORT",fork,reuseaddr,cert="$CERT",verify="$VERIFY" PIPE:/tmp/minimon/minimon-in
 run_server(){
 	 socat -u openssl-listen:"$PORT",fork,reuseaddr,cert="$CERT",verify="$VERIFY" \
 	 'system:
@@ -117,14 +112,14 @@ CURR_HOSTS=""
 
 
 #Make sure that cert is a valid pem file
-if [ -z "$CERT" ]; then echo "A cert path must be given"; exit 1; fi;
-if ! [ -f "$CERT" ]; then echo "cert not found"; exit 1; fi;
-if ! openssl x509 --noout -in "$CERT"; then echo "cert is not a valid pem"; exit 1; fi;
+if [ -z "$CERT" ]; then err "A cert path must be given";  fi;
+if ! [ -f "$CERT" ]; then err "cert not found";  fi;
+if ! openssl x509 --noout -in "$CERT"; then err "cert is not a valid pem";  fi;
 
 #Make sure that verify is a number
 re='^[0-9]+$'
-if ! [[ $VERIFY =~ $re ]] ; then echo "Verify must be a number" ; exit 1; fi
-if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then echo "verify must either be 0 or 1"; exit 1; fi;
+if ! [[ $VERIFY =~ $re ]] ; then err "Verify must be a number" ;  fi
+if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then err "verify must either be 0 or 1";  fi;
 
 setup
 run_server&
