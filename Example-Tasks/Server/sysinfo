@@ -1,0 +1,19 @@
+#!/bin/sh
+
+#==================================================================================================
+#title           :sysinfo
+#description     :parse sysinfo from client
+#author          :Wesley van Tilburg
+#date            :18/09/2022
+#version         :1
+#==================================================================================================
+
+run(){
+	tjson="$(echo $msg | jq '.system')"
+	CPU="$(echo $tjson | jq '.cpu')"
+	RAM="$(echo $tjson | jq '.ram')"
+	STORAGE="$(echo $tjson | jq '.storage')"
+	UPTIME="$(echo $tjson | jq '.uptime')"
+	echo "Cpu: $CPU , RAM: $RAM, storage: $STORAGE, uptime: $UPTIME"
+
+}

@@ -1,7 +1,13 @@
 #!/bin/sh
 
+#==================================================================================================
+#title           :sysinfo
+#description     :get basic system information
+#author          :Wesley van Tilburg
+#date            :13/09/2022
+#version         :1
+#==================================================================================================
 
-#Get basic system information
 run(){
         UPDATED="$(date)"
         HOST="$HOSTNAME"

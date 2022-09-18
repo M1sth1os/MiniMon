@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#==================================================================================================
+#title           :hello
+#description     :echo hello when the host is "workstation"
+#author          :Wesley van Tilburg
+#date            :18/09/2022
+#version         :1
+#==================================================================================================
+
+run(){
+	echo hello from workstation
+
+}
