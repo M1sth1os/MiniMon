@@ -34,6 +34,7 @@ usage(){
 ";}
 
 setup(){
+  log "starting minimon..."
 	mkdir -p /tmp/minimon/hosts/
 	if ! [ -e /tmp/minimon/control ]; then mkfifo /tmp/minimon/control; fi
 	TASKS="$(find "$TASKDIR" -type f -maxdepth 1)"
