@@ -1,5 +1,14 @@
 #!/bin/sh
 
+#==================================================================================================
+#title           :ping
+#description     :check  if the host is reachable using ping
+#author          :Wesley van Tilburg
+#date            :19/09/2022
+#version         :1
+#==================================================================================================
+
+
 
 #todo: make this configurable
 TRESHOLD=15 #trigger an alert after x failed pings
