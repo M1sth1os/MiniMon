@@ -30,13 +30,14 @@ usage(){
 -c : path for the certificate
 -v : verify the certificate (defaults to 0 = false)
 -t : folder which contains the tasks shell scripts (defaults to ./Tasks/)
+-m : folder which contains the monitor shell scripts (defaults to ./Monitors/)
 ";}
 
 setup(){
 	mkdir -p /tmp/minimon/hosts/
 	if ! [ -e /tmp/minimon/control ]; then mkfifo /tmp/minimon/control; fi
 	TASKS="$(find "$TASKDIR" -type f -maxdepth 1)"
-
+	MONITORS="$(find "$MONITORDIR" -type f -maxdepth 1)"
 }
 
 
@@ -56,11 +57,30 @@ run_server(){
 	
 }
 
-#Read the hosts metrics
+#Run monitor tasks 
+run_monitors(){
+  while :
+  do
+    hosts="$(cat /tmp/minimon/hosts.tmp 2>/dev/null)"
+    for host in $hosts
+    do
+      name="$(echo "$host" | cut -d: -f1)"
+      ip="$(echo "$host" | cut -d: -f2)"
+      for monitor in $MONITORS
+      do
+        . $monitor
+        run
+      done
+    done
+      sleep 10 #todo make configurable
+  done
+
+}
+
+#Parse and read the hosts metrics
 listen(){
 
-	hosttasks="$(find "$TASKDIR$1" -type f -maxdepth 1)"
-	TASKS="$TASKS $hosttasks"
+  if [ -d "$TASKDIR$1" ]; then hosttasks="$(find "$TASKDIR$1" -type f -maxdepth 1)"; TASKS="$TASKS $hosttasks"; fi
 		
 	while read msg < /tmp/minimon/hosts/$1
 	do
@@ -89,23 +109,26 @@ listen_control(){
 				  else 
 					  log "$name reconnected"
 				  fi
-				  CURR_HOSTS="$CURR_HOSTS $name:$ip"
+				  hosts="$hosts $name:$ip"
+          echo $hosts > /tmp/minimon/hosts.tmp
 				  ;;
 			disconnect*) 
 				  log "$name disconnected"
-				  old="$(echo $CURR_HOSTS | grep -o "$name.[0-9].*")"
-				  CURR_HOSTS="$(echo $CURR_HOSTS | sed "s/$old//g")"
+				  old="$(echo $hosts | grep -o "$name.[0-9].*")"
+				  hosts="$(echo $hosts | sed "s/$old//g")"
+          echo $hosts > /tmp/minimon/hosts.tmp
 			        ;;
 		 esac
 	done
 }
 
 ##--------- ARGUMENTS ----------#
-while getopts ':p:t:c:v:h' OPTION; do
+while getopts ':p:t:c:v:m:h' OPTION; do
 	case "$OPTION" in
 		p) PORT="$OPTARG";;
 		c) CERT="$OPTARG";;
 		t) TASKDIR="$OPTARG";;
+		m) MONITORDIR="$OPTARG";;
 		v) VERIFY="$OPTARG";;
 		h) usage; exit 0;;
 	esac
@@ -114,9 +137,9 @@ done
 #default values
 : ${PORT:="12345"}
 : ${TASKDIR:="./Tasks/"}
-: ${VERIFY:=0} #off by gefault for now
+: ${MONITORDIR:="./Monitors/"}
+: ${VERIFY:=0} #off by default for now
 STARTED=false
-CURR_HOSTS=""
 
 
 #Make sure that cert is a valid pem file
@@ -129,11 +152,13 @@ re='^[0-9]+$'
 if ! [[ $VERIFY =~ $re ]] ; then err "Verify must be a number" ;  fi
 if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then err "verify must either be 0 or 1";  fi;
 
-#Verify TASKDIR
+#Verify TASKDIR & MONITORDIR
 if ! [ -d "$TASKDIR" ]; then err "taskdir does not exist";  fi
+if ! [ -d "$MONITORDIR" ]; then err "monitordir does not exist";  fi
 
 setup
 run_server&
+run_monitors&
 listen_control&
 STARTED=true #for the cleanup trap
 
