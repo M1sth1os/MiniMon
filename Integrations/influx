@@ -1,0 +1,26 @@
+#!/bin/sh
+
+#==================================================================================================
+#title           :influx
+#description     :Save data to influxdb
+#author          :Wesley van Tilburg
+#date            :20/09/2022
+#version         :1
+#==================================================================================================
+
+URL="http://localhost:8086"
+ORGID=""
+BUCKETID=""
+TOKEN=""
+
+#Send data to influx, DATA is variable from parent
+integrate(){
+	status="$(curl -s -o /dev/null -w "%{http_code}" -XPOST "$URL/api/v2/write?org=$ORGID&bucket=$BUCKETID&precison=s" \
+		--header "Authorization: Token $TOKEN " \
+  		--header "Content-Type: text/plain; charset=utf-8" \
+  		--header "Accept: application/json" \
+  		--data-binary "$DATA")"
+	if ! [ "$status" -eq 204 ]; then
+		warn "influxdb write failed with exit code: $status"
+	fi
+}

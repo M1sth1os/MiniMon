@@ -9,11 +9,16 @@
 #==================================================================================================
 
 run(){
-	tjson="$(echo $msg | jq '.system')"
-	CPU="$(echo $tjson | jq '.cpu')"
-	RAM="$(echo $tjson | jq '.ram')"
-	STORAGE="$(echo $tjson | jq '.storage')"
-	UPTIME="$(echo $tjson | jq '.uptime')"
-	echo "Cpu: $CPU , RAM: $RAM, storage: $STORAGE, uptime: $UPTIME"
+	tjson="$(echo $msg | jq -r '.system')"
+	CPU="$(echo $tjson | jq -r '.cpu' | tr -d ' ')"
+	RAM="$(echo $tjson | jq -r '.ram')"
+	STORAGE="$(echo $tjson | jq -r  '.storage')"
+	UPTIME="$(echo $tjson | jq -r '.uptime')"
+	DATA="$TNAME,hostname=$HOST cpu=$CPU,ram=$RAM,storage=$STORAGE"
 
+	for integration in $INTEGRATIONS
+	do
+		. $integration
+		integrate
+	done
 }

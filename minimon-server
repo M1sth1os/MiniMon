@@ -36,6 +36,7 @@ usage(){
 setup(){
   log "starting minimon..."
 	mkdir -p /tmp/minimon/hosts/
+	mkdir -p /tmp/minimon/monitors/
 	if ! [ -e /tmp/minimon/control ]; then mkfifo /tmp/minimon/control; fi
 	TASKS="$(find "$TASKDIR" -type f -maxdepth 1)"
 	MONITORS="$(find "$MONITORDIR" -type f -maxdepth 1)"
@@ -82,11 +83,12 @@ run_monitors(){
 listen(){
 
   if [ -d "$TASKDIR$1" ]; then hosttasks="$(find "$TASKDIR$1" -type f -maxdepth 1)"; TASKS="$TASKS $hosttasks"; fi
-		
+	HOST=$1
 	while read msg < /tmp/minimon/hosts/$1
 	do
 		for task in $TASKS
 		do
+			TNAME="$(echo $task | rev | cut -d/ -f1 | rev)"
 			. $task
 			run
 		done
@@ -124,13 +126,14 @@ listen_control(){
 }
 
 ##--------- ARGUMENTS ----------#
-while getopts ':p:t:c:v:m:h' OPTION; do
+while getopts ':p:t:c:v:m:i:h' OPTION; do
 	case "$OPTION" in
 		p) PORT="$OPTARG";;
 		c) CERT="$OPTARG";;
 		t) TASKDIR="$OPTARG";;
 		m) MONITORDIR="$OPTARG";;
 		v) VERIFY="$OPTARG";;
+		i) INTEGRATIONDIR="$OPTARG";;
 		h) usage; exit 0;;
 	esac
 done
@@ -139,6 +142,7 @@ done
 : ${PORT:="12345"}
 : ${TASKDIR:="./Tasks/"}
 : ${MONITORDIR:="./Monitors/"}
+: ${INTEGRATIONDIR:="./Integrations/"}
 : ${VERIFY:=0} #off by default for now
 STARTED=false
 
@@ -153,9 +157,10 @@ re='^[0-9]+$'
 if ! [[ $VERIFY =~ $re ]] ; then err "Verify must be a number" ;  fi
 if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then err "verify must either be 0 or 1";  fi;
 
-#Verify TASKDIR & MONITORDIR
+#Verify TASKDIR, MONITORDIR & INTEGRATIONSDIR
 if ! [ -d "$TASKDIR" ]; then err "taskdir does not exist";  fi
 if ! [ -d "$MONITORDIR" ]; then err "monitordir does not exist";  fi
+if  [ -d "$INTEGRATIONDIR" ]; then INTEGRATIONS="$(find "$INTEGRATIONDIR" -type f -maxdepth 1)"; fi
 
 setup
 run_server&
