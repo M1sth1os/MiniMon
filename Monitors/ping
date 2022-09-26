@@ -25,6 +25,14 @@ run(){
     else
       old_failures=$failures
       failures=$((failures + 1 ))
+
+      influx="$INTEGRATIONDIR/influx"
+      if [ -f "$influx" ]; then
+        DATA="ping,hostname=$name failures=$failures"
+        . $INTEGRATIONDIR/influx
+        influx_push
+      fi
+
         #todo: send alert when treshold is reached
       if [ "$failures" -gt $TRESHOLD ]; then warn "Alert trigger for $name";fi 
       sed -i "s/$name:$old_failures/$name:$failures/g" $file
