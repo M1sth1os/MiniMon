@@ -1,0 +1,78 @@
+#!/bin/sh
+
+#==================================================================================================
+#title           :irc
+#description     :Connect to irc
+#author          :Wesley van Tilburg
+#date            :26/09/2022
+#version         :1
+#==================================================================================================
+
+NICK="MiniMon"
+CHANNEL="#MiniMon"
+NETWORK="irc.libera.chat"
+PORT="6697"
+STARTED=false
+
+
+#send a raw irc message
+send_raw(){
+  echo $1 >> /tmp/minimon/irc_in
+}
+
+#send privmsg
+send_msg(){
+  send_raw "PRIVMSG $CHANNEL : $1" 
+}
+
+#Connect to the irc network
+connect(){
+  sleep 5 #give the client time to start
+	send_raw "NICK $NICK"
+	sleep 1
+	send_raw "USER $NICK $NICK $NICK $NICK"
+	sleep 1
+
+}
+
+#run the connection and handle messages
+run_client(){
+	tail -f /tmp/minimon/irc_in | socat stdio openssl-connect:"$NETWORK":"$PORT",verify=0 > /tmp/minimon/irc_out
+}
+
+#Handle the irc ping messages
+handle_ping(){
+  while :
+  do
+    read msg < /tmp/minimon/irc_out
+    case "$msg" in
+      PING*) send_raw "$(echo $msg | sed 's/I/O/')";;
+    esac
+  done
+
+}
+
+trigger(){
+
+#Start irc connection if none is found
+if ! [ -f "/tmp/minimon/irc_in" ]; then 
+  touch /tmp/minimon/irc_in
+  touch /tmp/minimon/irc_out
+  run_client&
+  handle_ping&
+  connect
+
+  while ! $STARTED
+  do
+    sleep 1
+  done
+  STARTED=true
+fi
+
+msg="$1 $2"
+#send the given msg
+send_msg $msg
+
+}
+
+
