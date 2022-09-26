@@ -33,8 +33,7 @@ run(){
         influx_push
       fi
 
-        #todo: send alert when treshold is reached
-      if [ "$failures" -gt $TRESHOLD ]; then warn "Alert trigger for $name";fi 
+      if [ "$failures" -gt $TRESHOLD ]; then trigger_alarms $name "has reached the ping treshold"; failures= 0; fi 
       sed -i "s/$name:$old_failures/$name:$failures/g" $file
     fi
   fi

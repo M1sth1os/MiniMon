@@ -26,12 +26,13 @@ err(){ log "$1" "${2:-error}" 31; exit 1; }
 
 usage(){
 	echo "MiniMon; made by Misthios
+-a : folder which contains the alarms shell scripts (defaults to ./Alarms/)
 -p : port for the server (defaults to 12345)
 -c : path for the certificate
 -v : verify the certificate (defaults to 0 = false)
 -t : folder which contains the tasks shell scripts (defaults to ./Tasks/)
 -m : folder which contains the monitor shell scripts (defaults to ./Monitors/)
-";}
+-i : folder which contains the integration shell scripts (defaults to ./Integrations/)";}
 
 setup(){
   log "starting minimon..."
@@ -75,6 +76,19 @@ run_monitors(){
       done
     done
       sleep 10 #todo make configurable
+  done
+
+}
+
+#Trigger alarms
+#$1 is the host that triggered it
+#$2 is the msg
+trigger_alarms(){
+  for alarm in $ALARMS 
+  do
+    echo "found $alarm"
+    . $alarm
+    trigger $1 $2
   done
 
 }
@@ -128,6 +142,7 @@ listen_control(){
 ##--------- ARGUMENTS ----------#
 while getopts ':p:t:c:v:m:i:h' OPTION; do
 	case "$OPTION" in
+		a) ALARMDIR="$OPTARG";;
 		p) PORT="$OPTARG";;
 		c) CERT="$OPTARG";;
 		t) TASKDIR="$OPTARG";;
@@ -139,6 +154,7 @@ while getopts ':p:t:c:v:m:i:h' OPTION; do
 done
 
 #default values
+: ${ALARMDIR:="./Alarms/"}
 : ${PORT:="12345"}
 : ${TASKDIR:="./Tasks/"}
 : ${MONITORDIR:="./Monitors/"}
@@ -157,10 +173,11 @@ re='^[0-9]+$'
 if ! [[ $VERIFY =~ $re ]] ; then err "Verify must be a number" ;  fi
 if ! [ "$VERIFY" -ge 0 ] && ["$VERIFY" -le 1 ]; then err "verify must either be 0 or 1";  fi;
 
-#Verify TASKDIR, MONITORDIR & INTEGRATIONSDIR
+#Verify all the folders
 if ! [ -d "$TASKDIR" ]; then err "taskdir does not exist";  fi
 if ! [ -d "$MONITORDIR" ]; then err "monitordir does not exist";  fi
 if  [ -d "$INTEGRATIONDIR" ]; then INTEGRATIONS="$(find "$INTEGRATIONDIR" -type f -maxdepth 1)"; fi
+if  [ -d "$ALARMDIR" ]; then ALARMS="$(find "$ALARMDIR" -type f -maxdepth 1)"; fi
 
 setup
 run_server&
