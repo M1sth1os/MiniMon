@@ -16,9 +16,6 @@ run(){
 	UPTIME="$(echo $tjson | jq -r '.uptime')"
 	DATA="$TNAME,hostname=$HOST cpu=$CPU,ram=$RAM,storage=$STORAGE"
 
-	for integration in $INTEGRATIONS
-	do
-		. $integration
-		integrate
-	done
+	. $INTEGRATIONDIR/influx
+  influx_push
 }

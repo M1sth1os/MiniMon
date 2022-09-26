@@ -14,7 +14,7 @@ BUCKETID=""
 TOKEN=""
 
 #Send data to influx, DATA is variable from parent
-integrate(){
+influx_push(){
 	status="$(curl -s -o /dev/null -w "%{http_code}" -XPOST "$URL/api/v2/write?org=$ORGID&bucket=$BUCKETID&precison=s" \
 		--header "Authorization: Token $TOKEN " \
   		--header "Content-Type: text/plain; charset=utf-8" \
