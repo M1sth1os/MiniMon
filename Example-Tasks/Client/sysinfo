@@ -11,8 +11,7 @@
 run(){
         UPDATED="$(date)"
         HOST="$HOSTNAME"
-        CPU="$(uptime | cut -d: -f5 | cut -d, -f1)"
-	#RAM="$(awk -v used=$USEDRAM -v max=$MAXRAM 'BEGIN { print  ( used / max * 100 ) }' | cut -c 1-4)"
+	CPU="$(echo 100 - $(mpstat -u | tail -1 | awk '{print $11}') | bc)"
 	RAM="$(free -m | awk 'NR==2{print $3*100/$2}' | cut -c -4)"
 	STORAGE="$(df / -h | awk '$NF=="/"{print  $5}' | sed 's/%//g')"
         UPTIME="$(uptime )"
