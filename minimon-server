@@ -81,14 +81,12 @@ run_monitors(){
 }
 
 #Trigger alarms
-#$1 is the host that triggered it
-#$2 is the msg
 trigger_alarms(){
   for alarm in $ALARMS 
   do
     echo "found $alarm"
     . $alarm
-    trigger $1 $2
+    trigger $*
   done
 
 }

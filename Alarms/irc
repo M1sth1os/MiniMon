@@ -22,7 +22,7 @@ send_raw(){
 
 #send privmsg
 send_msg(){
-  send_raw "PRIVMSG $CHANNEL : $1" 
+  send_raw "PRIVMSG $CHANNEL : $*" 
 }
 
 #Connect to the irc network
@@ -63,10 +63,7 @@ if ! [ -f "/tmp/minimon/irc_in" ]; then
   connect
 
 fi
-
-msg="$1 $2"
-#send the given msg
-send_msg $msg
+send_msg $*
 
 }
 
