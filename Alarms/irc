@@ -62,11 +62,6 @@ if ! [ -f "/tmp/minimon/irc_in" ]; then
   handle_ping&
   connect
 
-  while ! $STARTED
-  do
-    sleep 1
-  done
-  STARTED=true
 fi
 
 msg="$1 $2"
