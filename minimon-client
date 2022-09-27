@@ -72,16 +72,19 @@ run_server&
 #---------- Ugly way to detect connection failure by checking bg job status-----------#
 sleep 5 #give socat time to connect
 echo $(jobs) >> /tmp/minimon-jobs
-cat /tmp/minimon-jobs | grep -qi "Running"
-if ! [ "$?" -eq 0 ]; then err failed to connect...; fi
+if ! cat /tmp/minimon-jobs | grep -qi "Running"; then err "failed to connect aborting..."; fi
 #-------------------------------------------------------------------------------------#
 STARTED=true
-
+log "started minimon"
 
 
 #main loop
-while true
+while :
 do
+	#make sure that the background job is still running
+	echo $(jobs) > /tmp/minimon-jobs
+	if ! cat /tmp/minimon-jobs | grep -qi "Running"; then err "Lost connection with the server aborting.."; fi
+
 	gen_json
 	post_json
 	sleep $DELAY
