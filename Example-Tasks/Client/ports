@@ -1,0 +1,19 @@
+#!/bin/sh
+
+#==================================================================================================
+#title           :ports
+#description     :get all ports which are listening
+#author          :Wesley van Tilburg
+#date            :03/10/2022
+#version         :1
+#==================================================================================================
+
+run(){
+  ports="$(netstat -tulnp 2>/dev/null | awk -F::: '{print $2}' | strings)"
+  for port in $ports
+  do
+    tjson="$(echo "$tjson" | jq \
+					--arg port "$port" \
+					'.ports += [{"port": $port}]')"
+  done
+}
