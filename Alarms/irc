@@ -32,11 +32,13 @@ connect(){
 	sleep 1
 	send_raw "USER $NICK $NICK $NICK $NICK"
 	sleep 1
+	send_raw "JOIN $CHANNEL"
 
 }
 
 #run the connection and handle messages
 run_client(){
+	log "starting irc"
 	tail -f /tmp/minimon/irc_in | socat stdio openssl-connect:"$NETWORK":"$PORT",verify=0 > /tmp/minimon/irc_out
 }
 
