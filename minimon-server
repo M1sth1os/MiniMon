@@ -1,5 +1,4 @@
 #!/bin/sh
-set -m
 
 #==================================================================================================
 #title           :minimon-server
@@ -9,14 +8,15 @@ set -m
 #version         :0.05
 #==================================================================================================
 
-trap 'clean' EXIT SIGINT SIGTERM
+trap 'clean'  SIGINT 
 
 clean(){
+	log "Shutting down MiniMon..."
 	if $STARTED; then
-		kill -- -$(jobs -p)
 		rm -rf /tmp/mini*
-		exit 0
+
 	fi
+	kill -TERM -$(pgrep -o minimon-server) 
 }
 
 #Log functions
@@ -84,7 +84,6 @@ run_monitors(){
 trigger_alarms(){
   for alarm in $ALARMS 
   do
-    echo "found $alarm"
     . $alarm
     trigger $*
   done
@@ -96,6 +95,7 @@ listen(){
 
   if [ -d "$TASKDIR$1" ]; then hosttasks="$(find "$TASKDIR$1" -type f -maxdepth 1)"; TASKS="$TASKS $hosttasks"; fi
 	HOST=$1
+	IP=$2
 	while read msg < /tmp/minimon/hosts/$1
 	do
 		for task in $TASKS
@@ -120,18 +120,18 @@ listen_control(){
 				  if ! [ -e "$pipe" ]; then 
 					  log "New host: $name"
 					  mkfifo /tmp/minimon/hosts/"$name"
-					  listen $name&
+					  listen $name $ip&
 				  else 
 					  log "$name reconnected"
 				  fi
 				  hosts="$hosts $name:$ip"
-          echo $hosts > /tmp/minimon/hosts.tmp
+          			  echo $hosts > /tmp/minimon/hosts.tmp
 				  ;;
 			disconnect*) 
 				  log "$name disconnected"
 				  old="$(echo $hosts | grep -o "$name.[0-9].*")"
 				  hosts="$(echo $hosts | sed "s/$old//g")"
-          echo $hosts > /tmp/minimon/hosts.tmp
+         			  echo $hosts > /tmp/minimon/hosts.tmp
 			        ;;
 		 esac
 	done
@@ -182,6 +182,7 @@ run_server&
 run_monitors&
 listen_control&
 STARTED=true #for the cleanup trap
+log "Started MiniMon."
 
 #todo: replace with shell
 while :

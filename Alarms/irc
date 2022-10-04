@@ -39,18 +39,20 @@ connect(){
 #run the connection and handle messages
 run_client(){
 	log "starting irc"
-	tail -f /tmp/minimon/irc_in | socat stdio openssl-connect:"$NETWORK":"$PORT",verify=0 > /tmp/minimon/irc_out
+	tail -f /tmp/minimon/irc_in | socat stdio openssl-connect:"$NETWORK":"$PORT",verify=0 >/tmp/minimon/irc_out 
 }
 
 #Handle the irc ping messages
 handle_ping(){
   while :
   do
-    read msg < /tmp/minimon/irc_out
-    case "$msg" in
-      PING*) send_raw "$(echo $msg | sed 's/I/O/')";;
-    esac
-  done
+    if [ -f "/tmp/minimon/irc_out" ]; then
+	    read msg < /tmp/minimon/irc_out
+	    case "$msg" in
+		    PING*) send_raw "$(echo $msg | sed 's/I/O/')";;
+	    esac
+    fi
+    done
 
 }
 
